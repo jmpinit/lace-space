@@ -17,7 +17,7 @@ function elementFromPointUnderSVG(x, y) {
   console.log(descendantOfElementType(elementAtLocation, 'svg'));
 }
 
-function editProperties(svgEl) {
+function editSVGElement(svgEl) {
   const propertyPane = document.getElementById('svg-properties');
   const propertyTable = propertyPane.getElementsByTagName('table')[0];
 
@@ -26,6 +26,14 @@ function editProperties(svgEl) {
   function makeEl(tagName) {
     return document.createElement(tagName);
   }
+
+  const deleteBtn = makeEl('button');
+  deleteBtn.innerHTML = 'Delete';
+  deleteBtn.onclick = () => {
+    svgEl.parentElement.removeChild(svgEl);
+    propertyTable.innerHTML = '';
+  };
+  propertyTable.appendChild(deleteBtn);
 
   function createValueEditor(el, attrName) {
     const row = makeEl('tr');
@@ -79,7 +87,7 @@ function editProperties(svgEl) {
 }
 
 function selectSVGElement(el) {
-  editProperties(el);
+  editSVGElement(el);
 }
 
 function init() {
