@@ -39,12 +39,12 @@ server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 // Create two new pages
 // Create edge linking them
 
-const svg1 = `<svg width="100" height="100">
-  <rect width="50" height="50"/>
+const svg1 = `<svg width="10" height="10">
+  <rect width="10" height="10"/>
 </svg>`;
 
-const svg2 = `<svg width="100" height="100">
-  <circle cx="50" cy="50" r="40" fill="none" stroke="black" stroke-width="3"/>
+const svg2 = `<svg viewBox="-500 -500 500 500" width="1000" height="1000">
+  <circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>
 </svg>`;
 
 db.serialize(() => {
@@ -52,7 +52,18 @@ db.serialize(() => {
   db.run('DELETE FROM edges');
 
   const createPage = db.prepare('INSERT INTO pages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  createPage.run(uuid.v4(), Date.now(), 'god', svg1, 0, 0, 0, 0, 1, 0, 0);
-  createPage.run(uuid.v4(), Date.now(), 'god', svg2, 1, 0, 0, 0, 1, 0, 0);
+  createPage.run(uuid.v4(), Date.now(), 'god', svg2,
+    // Position
+    -0.581598,
+    34.4643,
+    7.50983,
+    // Normal
+    0.419571,
+    0.232605,
+    0.877414,
+    // Deleted
+    0);
+
+  // createPage.run(uuid.v4(), Date.now(), 'god', svg2, 1, 0, 0, 0, 1, 0, 0);
   createPage.finalize();
 });
