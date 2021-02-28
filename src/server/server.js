@@ -43,7 +43,7 @@ const svg1 = `<svg width="10" height="10">
   <rect width="10" height="10"/>
 </svg>`;
 
-const svg2 = `<svg viewBox="-500 -500 500 500" width="1000" height="1000">
+const svg2 = `<svg viewBox="-500 -500 1000 1000" width="1000" height="1000">
   <circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>
 </svg>`;
 

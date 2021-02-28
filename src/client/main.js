@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import * as ui from './ui';
 
 let scene;
 let camera;
@@ -12,6 +13,10 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
 
   renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const svgToEdit = document.getElementById('svg-to-edit');
+  svgToEdit.setAttribute('width', window.innerWidth.toString());
+  svgToEdit.setAttribute('height', window.innerHeight.toString());
 }
 
 function loadSVG(url) {
@@ -102,7 +107,7 @@ function loadGLTF(url) {
 }
 
 async function init() {
-  const container = document.getElementById('container');
+  const container = document.getElementById('3d');
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff);
@@ -179,5 +184,8 @@ function animate() {
   render();
 }
 
+// Entrypoint
+
+ui.init();
 init()
   .then(() => animate());
