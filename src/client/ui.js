@@ -139,6 +139,14 @@ function init() {
   };
 }
 
+function hookSVG(svg) {
+  Array.from(svg.children).forEach((child) => {
+    child.onclick = () => editSVGElement(child);
+    hookSVG(child);
+  });
+}
+
 module.exports = {
   init,
+  hookSVG,
 };
