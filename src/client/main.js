@@ -7,7 +7,7 @@ import loadGLTF from './gltf';
 const SVG_SCALE = 0.01;
 const PAGE_WIDTH = 1000;
 const PAGE_HEIGHT = 1000;
-const EDIT_DISTANCE = 100;
+const EDIT_DISTANCE = 10;
 
 let scene;
 let camera;
@@ -20,18 +20,11 @@ let networkStructure;
 function updateCameraByViewport() {
   camera.aspect = window.innerWidth / window.innerHeight;
 
-  /*
-  if (window.innerWidth > window.innerHeight) {
-    camera.left = (-PAGE_WIDTH / 2) * SVG_SCALE * camera.aspect;
-    camera.right = (PAGE_WIDTH / 2) * SVG_SCALE * camera.aspect;
-  } else {
-    camera.top = (-PAGE_HEIGHT / 2) * SVG_SCALE * camera.aspect;
-    camera.bottom = (PAGE_HEIGHT / 2) * SVG_SCALE * camera.aspect;
-  }
-  */
-
-  const h = PAGE_HEIGHT * SVG_SCALE;
   const d = camera.position.distanceTo(cameraControls.target);
+  let h = window.innerWidth > window.innerHeight ?
+    PAGE_HEIGHT * SVG_SCALE
+    : (PAGE_HEIGHT * SVG_SCALE) / camera.aspect;
+
   camera.fov = (180 * 2 * Math.atan(h / (2 * d))) / Math.PI;
 
   camera.updateProjectionMatrix();
@@ -75,6 +68,23 @@ function pageInfo(structure, uuid) {
       z: normZ,
     },
     svg,
+  };
+}
+
+function edgeInfo(structure, uuid) {
+  if (!(uuid in structure.edges)) {
+    throw new Error('Edge with UUID does not exist in structure');
+  }
+
+  const {
+    start_page_uuid: start,
+    end_page_uuid: end,
+  } = structure.edges[uuid];
+
+  return {
+    uuid,
+    start,
+    end,
   };
 }
 
@@ -144,19 +154,52 @@ async function loadPage(structure, uuid) {
   return info;
 }
 
+async function loadEdge(structure, uuid) {
+  if (!(uuid in structure.edges)) {
+    throw new Error('Edge with given UUID does not exist in structure');
+  }
+
+  const material = new THREE.LineBasicMaterial({
+    color: 0x0000ff,
+    linewidth: 10,
+  });
+
+  const { start: startUUID, end: endUUID } = edgeInfo(structure, uuid);
+  const start = pageInfo(structure, startUUID);
+  const end = pageInfo(structure, endUUID);
+
+  const points = [];
+  points.push(start.position);
+  points.push(end.position);
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+  const line = new THREE.Line(geometry, material);
+  line.name = uuid;
+  scene.add(line);
+
+  console.log('Loaded line:', points);
+}
+
 function loadStructure() {
   return fetch('/structure')
     .then((res) => res.json())
     .then((structure) => {
+      console.log(structure);
       // FIXME: remove global
       networkStructure = structure;
 
-      const pagePromises = [];
+      const objPromises = [];
+
       for (const uuid of Object.keys(structure.pages)) {
-        pagePromises.push(loadPage(structure, uuid));
+        objPromises.push(loadPage(structure, uuid));
       }
 
-      return Promise.all(pagePromises);
+      for (const uuid of Object.keys(structure.edges)) {
+        objPromises.push(loadEdge(structure, uuid));
+      }
+
+      return Promise.all(objPromises);
     });
 }
 
@@ -290,7 +333,7 @@ saveBtn.onclick = () => {
   })
     // Remove the existing structure
     .then(() => {
-      Object.keys(networkStructure.pages)
+      Object.keys(networkStructure.pages).concat(Object.keys(networkStructure.edges))
         .map((uuid) => scene.getObjectByName(uuid))
         .forEach((obj) => scene.remove(obj));
     })
@@ -327,6 +370,7 @@ newPageBtn.onclick = () => {
       'Content-type': 'application/json',
     },
     body: JSON.stringify({
+      origin: currentPage.uuid,
       position,
       normal,
       svg: '',
@@ -335,8 +379,6 @@ newPageBtn.onclick = () => {
     .then((res) => res.json())
     .then(async ({ uuid }) => {
       await loadStructure();
-      console.log('New page created', uuid, position, normal);
-      console.log(networkStructure.pages[uuid]);
       currentPage = pageInfo(networkStructure, uuid);
       changeMode('edit');
     });

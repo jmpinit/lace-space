@@ -37,8 +37,28 @@ function updatePage(pageUUID, svg) {
   updatePageQuery.finalize();
 }
 
+function createEdge(author, startUUID, endUUID) {
+  const edgeUUID = uuid.v4();
+
+  /*
+  uuid TEXT PRIMARY KEY,
+    creation_time INTEGER,
+    author_uuid TEXT,
+    start_page_uuid TEXT,
+    end_page_uuid TEXT,
+    deleted INTEGER
+   */
+
+  const createEdgeQuery = db.prepare('INSERT INTO edges VALUES (?, ?, ?, ?, ?, ?)');
+  createEdgeQuery.run(edgeUUID, Date.now(), author, startUUID, endUUID, 0);
+
+  createEdgeQuery.finalize();
+
+  return edgeUUID;
+}
+
 app.get('/structure', async (req, res) => {
-  const structure = { pages: {}, edges: [] };
+  const structure = { pages: {}, edges: {} };
 
   await new Promise((fulfill, reject) => {
     db.each('SELECT * FROM pages', (err, row) => {
@@ -55,6 +75,21 @@ app.get('/structure', async (req, res) => {
     }, () => fulfill());
   });
 
+  await new Promise((fulfill, reject) => {
+    db.each('SELECT * FROM edges', (err, row) => {
+      if (err) {
+        reject();
+        return;
+      }
+
+      if (row.deleted === 0) {
+        const { uuid, creation_time, author_uuid, deleted, ...edgeInfo } = row;
+        edgeInfo.uuid = uuid;
+        structure.edges[uuid] = edgeInfo;
+      }
+    }, () => fulfill());
+  });
+
   res.json(structure);
 });
 
@@ -66,13 +101,17 @@ app.get('/page/:uuid', (req, res) =>{
 app.post('/page', (req, res) => {
   // TODO: fully validate
 
-  const { position, normal, svg } = req.body;
+  const { origin, position, normal, svg } = req.body;
 
   // TODO: Normalize normal
   // TODO: Enforce position distance constraint
   // TODO: Clean/validate SVG contents
 
   const pageUUID = createPage('god', svg, position, normal);
+
+  if (origin !== undefined) {
+    createEdge('god', origin, pageUUID);
+  }
 
   res.json({ uuid: pageUUID });
 });
@@ -90,6 +129,8 @@ app.put('/page', (req, res) => {
 const server = http.createServer(app);
 server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 
+// FIXME: remove
+// Initialize the database with some sample pages
 db.serialize(() => {
   db.run('DELETE FROM pages');
   db.run('DELETE FROM edges');
