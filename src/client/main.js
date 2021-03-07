@@ -18,6 +18,10 @@ let currentPage;
 
 let networkStructure;
 
+function vector3FromXYZ(pos) {
+  return new THREE.Vector3(pos.x, pos.y, pos.z);
+}
+
 function updateCameraByViewport() {
   camera.aspect = window.innerWidth / window.innerHeight;
 
@@ -94,7 +98,7 @@ function lookAtPage(structure, uuid) {
 
   // Move the camera to look at the page
   const svgObj = scene.getObjectByName(uuid);
-  const normal = new THREE.Vector3(info.normal.x, info.normal.y, info.normal.z).normalize();
+  const normal = vector3FromXYZ(info.normal).normalize();
   const pageCamPos = normal.clone()
     // Offset from the page
     .multiplyScalar(EDIT_DISTANCE)
@@ -149,7 +153,7 @@ async function loadPage(structure, uuid) {
   svgObj.position.z = info.position.z;
 
   // Orient SVG according to its normal
-  const normal = new THREE.Vector3(info.normal.x, info.normal.y, info.normal.z).normalize();
+  const normal = vector3FromXYZ(info.normal).normalize();
   svgObj.lookAt(new THREE.Vector3().addVectors(svgObj.position, normal));
 
   return info;
@@ -160,26 +164,29 @@ async function loadEdge(structure, uuid) {
     throw new Error('Edge with given UUID does not exist in structure');
   }
 
-  const material = new THREE.LineBasicMaterial({
-    color: 0x0000ff,
-    linewidth: 10,
-  });
-
   const { start: startUUID, end: endUUID } = edgeInfo(structure, uuid);
   const start = pageInfo(structure, startUUID);
   const end = pageInfo(structure, endUUID);
 
-  const points = [];
-  points.push(start.position);
-  points.push(end.position);
+  const startPos = vector3FromXYZ(start.position);
+  const endPos = vector3FromXYZ(end.position);
 
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const edgeLength = endPos.clone()
+    .sub(startPos)
+    .length();
 
-  const line = new THREE.Line(geometry, material);
-  line.name = uuid;
-  scene.add(line);
+  const geometry = new THREE.CylinderGeometry(0.1, 0.1, edgeLength, 3);
+  const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const edgeCylinder = new THREE.Mesh(geometry, material);
+  edgeCylinder.position.z = edgeLength / 2;
+  edgeCylinder.rotation.x = Math.PI / 2;
+  const edgeObj = new THREE.Group();
+  edgeObj.add(edgeCylinder);
+  edgeObj.position.copy(startPos);
+  edgeObj.lookAt(endPos);
 
-  console.log('Loaded line:', points);
+  edgeObj.name = uuid;
+  scene.add(edgeObj);
 }
 
 function loadStructure() {
