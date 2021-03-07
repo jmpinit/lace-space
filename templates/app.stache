@@ -66,6 +66,11 @@
             </table>
         </div>
     </div>
+    <script>
+      window.lacespace = {
+          currentPage: '{{pageUUID}}',
+      };
+    </script>
     <script src="/js/app.js"></script>
 </body>
 </html>

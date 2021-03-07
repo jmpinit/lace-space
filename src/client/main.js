@@ -268,9 +268,9 @@ async function init() {
   cameraControls.enabled = false;
 
   // Content
-  scene.add(await loadGLTF('models/out_main.gltf'));
+  scene.add(await loadGLTF('/models/out_main.gltf'));
   loadStructure()
-    .then((pages) => editPage(networkStructure, pages[1].uuid));
+    .then((pages) => editPage(networkStructure, window.lacespace.currentPage));
 }
 
 function render() {
@@ -410,9 +410,7 @@ newPageBtn.onclick = () => {
   })
     .then((res) => res.json())
     .then(async ({ uuid }) => {
-      await loadStructure();
-      currentPage = pageInfo(networkStructure, uuid);
-      changeMode('edit');
+      window.location.href = `/page/${uuid}`;
     });
 };
 

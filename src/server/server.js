@@ -1,8 +1,10 @@
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const uuid = require('uuid');
 const express = require('express');
 const sqlite3 = require('sqlite3');
+const Mustache = require('mustache');
 
 const PORT = 8000;
 
@@ -40,15 +42,6 @@ function updatePage(pageUUID, svg) {
 function createEdge(author, startUUID, endUUID) {
   const edgeUUID = uuid.v4();
 
-  /*
-  uuid TEXT PRIMARY KEY,
-    creation_time INTEGER,
-    author_uuid TEXT,
-    start_page_uuid TEXT,
-    end_page_uuid TEXT,
-    deleted INTEGER
-   */
-
   const createEdgeQuery = db.prepare('INSERT INTO edges VALUES (?, ?, ?, ?, ?, ?)');
   createEdgeQuery.run(edgeUUID, Date.now(), author, startUUID, endUUID, 0);
 
@@ -56,6 +49,38 @@ function createEdge(author, startUUID, endUUID) {
 
   return edgeUUID;
 }
+
+function pageExists(pageUUID) {
+  const pageExistsQuery = db.prepare('SELECT null FROM pages WHERE uuid = ?');
+
+  return new Promise((fulfill, reject) => {
+    pageExistsQuery.all(pageUUID, (err, rows) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      fulfill(rows.length > 0);
+    });
+  });
+}
+
+app.get('/', async (req, res) => {
+  const homepageUUID = await new Promise((fulfill, reject) => {
+    db.each('SELECT * FROM pages LIMIT 1', (err, row) => {
+      if (err) {
+        reject();
+        return;
+      }
+
+      const { uuid: pageUUID } = row;
+
+      fulfill(pageUUID);
+    });
+  });
+
+  res.redirect(`/page/${homepageUUID}`);
+});
 
 app.get('/structure', async (req, res) => {
   const structure = { pages: {}, edges: {} };
@@ -93,9 +118,23 @@ app.get('/structure', async (req, res) => {
   res.json(structure);
 });
 
-app.get('/page/:uuid', (req, res) =>{
-  console.log('req.params', req.params);
-  res.send();
+app.get('/page/:uuid', async (req, res) =>{
+  const appTemplate = await new Promise((fulfill, reject) => {
+    fs.readFile(path.join(__dirname, '../../templates/app.stache'), 'utf-8', (err, data) => {
+      if (err) {
+        reject(err);
+      }
+
+      fulfill(data);
+    });
+  });
+
+  if (!await pageExists(req.params.uuid)) {
+    res.redirect('/');
+    return;
+  }
+
+  res.send(Mustache.render(appTemplate, { pageUUID: req.params.uuid }));
 });
 
 app.post('/page', (req, res) => {
@@ -104,6 +143,7 @@ app.post('/page', (req, res) => {
   const { origin, position, normal, svg } = req.body;
 
   // TODO: Normalize normal
+
   // TODO: Enforce position distance constraint
   // TODO: Clean/validate SVG contents
 
