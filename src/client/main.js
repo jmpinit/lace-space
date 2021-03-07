@@ -82,6 +82,9 @@ function lookAtPage(structure, uuid) {
 
   // Target the camera controls on the page
   cameraControls.target.copy(svgObj.position);
+
+  // Hide the 3D object
+  svgObj.visible = false;
 }
 
 function editPage(structure, uuid) {
@@ -185,6 +188,7 @@ async function init() {
   cameraControls.screenSpacePanning = true;
   cameraControls.minZoom = 0.5;
   cameraControls.maxZoom = 2;
+  cameraControls.enabled = false;
 
   // Content
   scene.add(await loadGLTF('models/out_main.gltf'));
@@ -201,7 +205,53 @@ function animate() {
   render();
 }
 
-const saveBtn = document.getElementById('save-page');
+function makeVisible(id, isVisible) {
+  const el = document.getElementById(id);
+  el.setAttribute('style', isVisible ? '' : 'display: none');
+}
+
+function changeMode(modeName) {
+  switch (modeName) {
+    case 'edit':
+    default:
+      makeVisible('btn-move', true);
+      makeVisible('btn-back', false);
+      makeVisible('btn-new', false);
+      makeVisible('btn-save', true);
+
+      makeVisible('svg-to-edit', true);
+      editPage(networkStructure, currentPage.uuid);
+      cameraControls.enabled = false;
+
+      break;
+    case 'move':
+      makeVisible('btn-move', false);
+      makeVisible('btn-back', true);
+      makeVisible('btn-new', true);
+      makeVisible('btn-save', false);
+
+      makeVisible('svg-to-edit', false);
+      scene.getObjectByName(currentPage.uuid).visible = true;
+      cameraControls.enabled = true;
+
+      break;
+  }
+}
+
+const moveBtn = document.getElementById('btn-move');
+moveBtn.onclick = () => {
+  changeMode('move');
+  window.history.pushState({ mode: 'edit' }, 'New Page');
+};
+
+const backBtn = document.getElementById('btn-back');
+backBtn.onclick = () => window.history.back();
+
+window.onpopstate = (event) => {
+  changeMode(event.state.mode);
+};
+
+const saveBtn = document.getElementById('btn-save');
 saveBtn.onclick = () => {
   const svgToEdit = document.getElementById('svg-to-edit');
   const svg = svgToEdit.innerHTML;
