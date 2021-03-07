@@ -12,6 +12,7 @@ const EDIT_DISTANCE = 10;
 let scene;
 let camera;
 let cameraControls;
+let cursorObj;
 let renderer;
 let currentPage;
 
@@ -21,8 +22,8 @@ function updateCameraByViewport() {
   camera.aspect = window.innerWidth / window.innerHeight;
 
   const d = camera.position.distanceTo(cameraControls.target);
-  let h = window.innerWidth > window.innerHeight ?
-    PAGE_HEIGHT * SVG_SCALE
+  const h = window.innerWidth > window.innerHeight
+    ? PAGE_HEIGHT * SVG_SCALE
     : (PAGE_HEIGHT * SVG_SCALE) / camera.aspect;
 
   camera.fov = (180 * 2 * Math.atan(h / (2 * d))) / Math.PI;
@@ -229,6 +230,18 @@ async function init() {
   const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
   scene.add(light);
 
+  (() => {
+    const geometry = new THREE.SphereGeometry(1, 8, 8);
+    const wireframe = new THREE.WireframeGeometry(geometry);
+    cursorObj = new THREE.LineSegments(wireframe);
+    //cursorObj.material.depthTest = false;
+    cursorObj.material.opacity = 0.25;
+    cursorObj.material.transparent = true;
+    scene.add(cursorObj);
+
+    cursorObj.visible = false;
+  })();
+
   // Window resize handler keeps renderer filling the entire page
   window.addEventListener('resize', onWindowResize);
 
@@ -254,6 +267,14 @@ async function init() {
 }
 
 function render() {
+  const normalVector3 = camera.position.clone()
+    .sub(cameraControls.target)
+    .normalize();
+
+  cursorObj.position.copy(normalVector3.clone()
+    .multiplyScalar(-EDIT_DISTANCE)
+    .add(camera.position));
+
   renderer.render(scene, camera);
 }
 
@@ -283,6 +304,8 @@ function changeMode(modeName) {
       editPage(networkStructure, currentPage.uuid);
       cameraControls.enabled = false;
 
+      cursorObj.visible = false;
+
       break;
     case 'move':
       makeVisible('btn-move', false);
@@ -296,6 +319,8 @@ function changeMode(modeName) {
       makeVisible('svg-to-edit', false);
       scene.getObjectByName(currentPage.uuid).visible = true;
       cameraControls.enabled = true;
+
+      cursorObj.visible = true;
 
       break;
   }
