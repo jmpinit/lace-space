@@ -84,9 +84,6 @@ function editSVGElement(svgEl) {
     case 'rect':
       createValueEditors(svgEl, ['x', 'y', 'width', 'height']);
       break;
-    case 'text':
-      createValueEditors(svgEl, ['innerHTML', 'x', 'y']);
-      break;
     default:
       console.log('User clicked on unknown element', svgEl.tagName);
   }
@@ -100,7 +97,6 @@ function init() {
   const lineBtnEl = document.getElementById('btn-make-line');
   const circleBtnEl = document.getElementById('btn-make-circle');
   const rectBtnEl = document.getElementById('btn-make-rect');
-  const textBtnEl = document.getElementById('btn-make-text');
 
   const svgToEdit = document.getElementById('svg-to-edit');
 
@@ -135,14 +131,6 @@ function init() {
     rect.setAttribute('y', '-50');
     rect.setAttribute('width', '100');
     rect.setAttribute('height', '100');
-  };
-
-  textBtnEl.onclick = () => {
-    const text = createSVGElToEdit('text');
-
-    text.innerHTML = 'hello';
-    text.setAttribute('x', '0');
-    text.setAttribute('y', '0');
   };
 }
 

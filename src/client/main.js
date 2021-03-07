@@ -233,7 +233,7 @@ function changeMode(modeName) {
       makeVisible('btn-new', false);
       makeVisible('btn-save', true);
 
-      ['btn-make-line', 'btn-make-circle', 'btn-make-rect', 'btn-make-text']
+      ['btn-make-line', 'btn-make-circle', 'btn-make-rect']
         .forEach((name) => makeVisible(name, true));
 
       makeVisible('svg-to-edit', true);
@@ -247,7 +247,7 @@ function changeMode(modeName) {
       makeVisible('btn-new', true);
       makeVisible('btn-save', false);
 
-      ['btn-make-line', 'btn-make-circle', 'btn-make-rect', 'btn-make-text']
+      ['btn-make-line', 'btn-make-circle', 'btn-make-rect']
         .forEach((name) => makeVisible(name, false));
 
       makeVisible('svg-to-edit', false);
