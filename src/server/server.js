@@ -9,10 +9,11 @@ const PORT = 8000;
 const db = new sqlite3.Database(path.join(__dirname, '../../wiki.db'));
 
 const app = express();
+app.use(express.json());
 app.use(express.static('public'));
 
 app.get('/structure', async (req, res) => {
-  const structure = { pages: [], edges: [] };
+  const structure = { pages: {}, edges: [] };
 
   await new Promise((fulfill, reject) => {
     db.each('SELECT * FROM pages', (err, row) => {
@@ -23,12 +24,23 @@ app.get('/structure', async (req, res) => {
 
       if (row.deleted === 0) {
         const { uuid, creation_time, author_uuid, deleted, ...pageInfo } = row;
-        structure.pages.push(pageInfo);
+        pageInfo.uuid = uuid;
+        structure.pages[uuid] = pageInfo;
       }
     }, () => fulfill());
   });
 
   res.json(structure);
+});
+
+app.get('/page/:uuid', (req, res) =>{
+  console.log('req.params', req.params);
+  res.send();
+});
+
+app.put('/page', (req, res) => {
+  // TODO: implement
+  // create page
 });
 
 const server = http.createServer(app);
@@ -41,26 +53,73 @@ server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 
 const svg1 = `<rect width="10" height="10"/>`;
 
-const svg2 = `<rect x="-500" y="-500" width="1000" height="1000" fill="none" stroke="green" stroke-width="10"/>
-  <circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>`;
+
+function makePage(author, svg, position, normal) {
+  const makePageQuery = db.prepare('INSERT INTO pages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  makePageQuery.run(uuid.v4(), Date.now(), author, svg,
+    position.x,
+    position.y,
+    position.z,
+    normal.x,
+    normal.y,
+    normal.z,
+    0,
+  );
+
+  makePageQuery.finalize();
+}
 
 db.serialize(() => {
   db.run('DELETE FROM pages');
   db.run('DELETE FROM edges');
 
-  const createPage = db.prepare('INSERT INTO pages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  createPage.run(uuid.v4(), Date.now(), 'god', svg2,
-    // Position
-    -0.581598,
-    34.4643,
-    7.50983,
-    // Normal
-    0.419571,
-    0.232605,
-    0.877414,
-    // Deleted
-    0);
+  // Top leaf
+  const pageTopLeaf = {
+    position: {
+      x: -0.581598,
+      y: 34.4643,
+      z: 7.50983,
+    },
+    normal: {
+      x: 0.419571,
+      y: 0.232605,
+      z: 0.877414,
+    },
+    svg: '<rect x="-500" y="-500" width="1000" height="1000" fill="none" stroke="green" stroke-width="10"/>'
+      + '<circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>',
+  };
 
-  // createPage.run(uuid.v4(), Date.now(), 'god', svg2, 1, 0, 0, 0, 1, 0, 0);
-  createPage.finalize();
+  const pagePCB = {
+    position: {
+      x: 27.2148,
+      y: -16.0915,
+      z: 21.4505,
+    },
+    normal: {
+      x: 0.830587,
+      y: -0.125743,
+      z: 0.542507,
+    },
+    svg: '<rect x="-500" y="-500" width="1000" height="1000" fill="none" stroke="green" stroke-width="10"/>'
+      + '<circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>',
+  };
+
+  const pageEraser = {
+    position: {
+      x: 3.55427,
+      y: 27.6806,
+      z: -12.8945,
+    },
+    normal: {
+      x: 0.119286,
+      y: 0.978212,
+      z: -0.169919,
+    },
+    svg: '<rect x="-500" y="-500" width="1000" height="1000" fill="none" stroke="green" stroke-width="10"/>'
+      + '<circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>',
+  };
+
+  makePage('god', pageTopLeaf.svg, pageTopLeaf.position, pageTopLeaf.normal);
+  makePage('god', pagePCB.svg, pagePCB.position, pagePCB.normal);
+  makePage('god', pageEraser.svg, pageEraser.position, pageEraser.normal);
 });
