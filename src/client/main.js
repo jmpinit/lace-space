@@ -7,6 +7,7 @@ import loadGLTF from './gltf';
 const SVG_SCALE = 0.01;
 const PAGE_WIDTH = 1000;
 const PAGE_HEIGHT = 1000;
+const EDIT_DISTANCE = 100;
 
 let scene;
 let camera;
@@ -19,6 +20,7 @@ let networkStructure;
 function updateCameraAspect() {
   camera.aspect = window.innerWidth / window.innerHeight;
 
+  /*
   if (window.innerWidth > window.innerHeight) {
     camera.left = (-PAGE_WIDTH / 2) * SVG_SCALE * camera.aspect;
     camera.right = (PAGE_WIDTH / 2) * SVG_SCALE * camera.aspect;
@@ -26,6 +28,14 @@ function updateCameraAspect() {
     camera.top = (-PAGE_HEIGHT / 2) * SVG_SCALE * camera.aspect;
     camera.bottom = (PAGE_HEIGHT / 2) * SVG_SCALE * camera.aspect;
   }
+  */
+
+  const h = PAGE_HEIGHT * SVG_SCALE;
+  const d = camera.position.distanceTo(cameraControls.target);
+  console.log('cam and target', camera.position, cameraControls.target)
+  console.log('h and d', h, d);
+  camera.fov = (180 * 2 * Math.atan(h / (2 * d))) / Math.PI;
+  console.log(camera.fov);
 
   camera.updateProjectionMatrix();
 }
@@ -77,7 +87,12 @@ function lookAtPage(structure, uuid) {
   // Move the camera to look at the page
   const svgObj = scene.getObjectByName(uuid);
   const normal = new THREE.Vector3(info.normal.x, info.normal.y, info.normal.z).normalize();
-  camera.position.copy(normal.clone().multiplyScalar(10).add(svgObj.position));
+  const pageCamPos = normal.clone()
+    // Offset from the page
+    .multiplyScalar(EDIT_DISTANCE)
+    // Move to the page
+    .add(svgObj.position);
+  camera.position.copy(pageCamPos);
   camera.lookAt(svgObj.position);
 
   // Target the camera controls on the page
@@ -85,6 +100,8 @@ function lookAtPage(structure, uuid) {
 
   // Hide the 3D object
   svgObj.visible = false;
+
+  updateCameraAspect();
 }
 
 function editPage(structure, uuid) {
@@ -152,8 +169,8 @@ async function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff);
 
-  // camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
-  // camera.position.set(0, 0, 200);
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+  /*
   camera = new THREE.OrthographicCamera(
     (-PAGE_WIDTH / 2) * SVG_SCALE,
     (PAGE_WIDTH / 2) * SVG_SCALE,
@@ -162,6 +179,7 @@ async function init() {
     1,
     1000,
   );
+  */
 
   // Lighting
 
@@ -180,7 +198,6 @@ async function init() {
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   container.appendChild(renderer.domElement);
-  updateCameraAspect();
 
   // Camera controls
 
@@ -275,7 +292,8 @@ saveBtn.onclick = () => {
         .forEach((obj) => scene.remove(obj));
     })
     // Load the current structure
-    .then(() => loadStructure());
+    .then(() => loadStructure())
+    .then(() => lookAtPage(networkStructure, currentPage.uuid));
 };
 
 // Entrypoint
