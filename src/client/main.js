@@ -128,7 +128,7 @@ async function loadPage(structure, uuid) {
 }
 
 function loadStructure() {
-  fetch('/structure')
+  return fetch('/structure')
     .then((res) => res.json())
     .then((structure) => {
       // FIXME: remove global
@@ -140,8 +140,7 @@ function loadStructure() {
       }
 
       return Promise.all(pagePromises);
-    })
-    .then((pages) => editPage(networkStructure, pages[1].uuid));
+    });
 }
 
 async function init() {
@@ -189,7 +188,8 @@ async function init() {
 
   // Content
   scene.add(await loadGLTF('models/out_main.gltf'));
-  loadStructure();
+  loadStructure()
+    .then((pages) => editPage(networkStructure, pages[1].uuid));
 }
 
 function render() {
@@ -217,7 +217,15 @@ saveBtn.onclick = () => {
       'Content-type': 'application/json',
     },
     body: JSON.stringify(newPage),
-  });
+  })
+    // Remove the existing structure
+    .then(() => {
+      Object.keys(networkStructure.pages)
+        .map((uuid) => scene.getObjectByName(uuid))
+        .forEach((obj) => scene.remove(obj));
+    })
+    // Load the current structure
+    .then(() => loadStructure());
 };
 
 // Entrypoint

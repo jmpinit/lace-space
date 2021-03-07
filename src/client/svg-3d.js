@@ -14,6 +14,7 @@ function loadSVG(url) {
       for (let i = 0; i < paths.length; i += 1) {
         const path = paths[i];
 
+        /*
         const fillColor = path.userData.style.fill;
         const fillMaterial = new THREE.MeshBasicMaterial({
           color: new THREE.Color().setStyle(fillColor),
@@ -26,9 +27,10 @@ function loadSVG(url) {
 
         const shapes = path.toShapes(true);
 
-        /*
         for (let j = 0; j < shapes.length; j += 1) {
           const shape = shapes[j];
+
+          console.log(shape);
 
           const geometry = new THREE.ShapeGeometry(shape);
           const mesh = new THREE.Mesh(geometry, fillMaterial);
