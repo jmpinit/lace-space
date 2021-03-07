@@ -12,6 +12,27 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
+function createPage(author, svg, position, normal) {
+  const createPageQuery = db.prepare('INSERT INTO pages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  createPageQuery.run(uuid.v4(), Date.now(), author, svg,
+    position.x,
+    position.y,
+    position.z,
+    normal.x,
+    normal.y,
+    normal.z,
+    0,
+  );
+
+  createPageQuery.finalize();
+}
+
+function updatePage(pageUUID, svg) {
+  const updatePageQuery = db.prepare('UPDATE pages SET svg = ? WHERE uuid = ?');
+  updatePageQuery.run(svg, pageUUID);
+  updatePageQuery.finalize();
+}
+
 app.get('/structure', async (req, res) => {
   const structure = { pages: {}, edges: [] };
 
@@ -39,35 +60,17 @@ app.get('/page/:uuid', (req, res) =>{
 });
 
 app.put('/page', (req, res) => {
-  // TODO: implement
-  // create page
+  // TODO: fully validate
+
+  const { uuid: pageUUID, svg } = req.body;
+
+  updatePage(pageUUID, svg);
+
+  res.send('ok');
 });
 
 const server = http.createServer(app);
 server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
-
-// Connect
-// Delete all pages and edges
-// Create two new pages
-// Create edge linking them
-
-const svg1 = `<rect width="10" height="10"/>`;
-
-
-function makePage(author, svg, position, normal) {
-  const makePageQuery = db.prepare('INSERT INTO pages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  makePageQuery.run(uuid.v4(), Date.now(), author, svg,
-    position.x,
-    position.y,
-    position.z,
-    normal.x,
-    normal.y,
-    normal.z,
-    0,
-  );
-
-  makePageQuery.finalize();
-}
 
 db.serialize(() => {
   db.run('DELETE FROM pages');
@@ -119,7 +122,7 @@ db.serialize(() => {
       + '<circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>',
   };
 
-  makePage('god', pageTopLeaf.svg, pageTopLeaf.position, pageTopLeaf.normal);
-  makePage('god', pagePCB.svg, pagePCB.position, pagePCB.normal);
-  makePage('god', pageEraser.svg, pageEraser.position, pageEraser.normal);
+  createPage('god', pageTopLeaf.svg, pageTopLeaf.position, pageTopLeaf.normal);
+  createPage('god', pagePCB.svg, pagePCB.position, pagePCB.normal);
+  createPage('god', pageEraser.svg, pageEraser.position, pageEraser.normal);
 });

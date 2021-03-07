@@ -12,6 +12,7 @@ let scene;
 let camera;
 let cameraControls;
 let renderer;
+let currentPage;
 
 let networkStructure;
 
@@ -93,6 +94,8 @@ function editPage(structure, uuid) {
 
   // Set the camera to look at the page in the 3D scene
   lookAtPage(structure, uuid);
+
+  currentPage = info;
 }
 
 async function loadPage(structure, uuid) {
@@ -198,13 +201,26 @@ function animate() {
   render();
 }
 
-// Entrypoint
-
 const saveBtn = document.getElementById('save-page');
 saveBtn.onclick = () => {
-  console.log(camera.position, camera.left, camera.right);
+  const svgToEdit = document.getElementById('svg-to-edit');
+  const svg = svgToEdit.innerHTML;
+
+  const newPage = {
+    ...currentPage,
+    svg,
+  };
+
+  fetch('/page', {
+    method: 'PUT',
+    headers: {
+      'Content-type': 'application/json',
+    },
+    body: JSON.stringify(newPage),
+  });
 };
 
+// Entrypoint
 ui.init();
 init()
   .then(() => animate());
