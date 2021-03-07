@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import * as ui from './ui';
+import * as ui from './editor-ui';
 import loadSVG from './svg-3d';
 import loadGLTF from './gltf';
 
@@ -17,7 +17,7 @@ let currentPage;
 
 let networkStructure;
 
-function updateCameraAspect() {
+function updateCameraByViewport() {
   camera.aspect = window.innerWidth / window.innerHeight;
 
   /*
@@ -32,16 +32,13 @@ function updateCameraAspect() {
 
   const h = PAGE_HEIGHT * SVG_SCALE;
   const d = camera.position.distanceTo(cameraControls.target);
-  console.log('cam and target', camera.position, cameraControls.target)
-  console.log('h and d', h, d);
   camera.fov = (180 * 2 * Math.atan(h / (2 * d))) / Math.PI;
-  console.log(camera.fov);
 
   camera.updateProjectionMatrix();
 }
 
 function onWindowResize() {
-  updateCameraAspect();
+  updateCameraByViewport();
 
   renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -101,7 +98,7 @@ function lookAtPage(structure, uuid) {
   // Hide the 3D object
   svgObj.visible = false;
 
-  updateCameraAspect();
+  updateCameraByViewport();
 }
 
 function editPage(structure, uuid) {
@@ -236,6 +233,9 @@ function changeMode(modeName) {
       makeVisible('btn-new', false);
       makeVisible('btn-save', true);
 
+      ['btn-make-line', 'btn-make-circle', 'btn-make-rect', 'btn-make-text']
+        .forEach((name) => makeVisible(name, true));
+
       makeVisible('svg-to-edit', true);
       editPage(networkStructure, currentPage.uuid);
       cameraControls.enabled = false;
@@ -246,6 +246,9 @@ function changeMode(modeName) {
       makeVisible('btn-back', true);
       makeVisible('btn-new', true);
       makeVisible('btn-save', false);
+
+      ['btn-make-line', 'btn-make-circle', 'btn-make-rect', 'btn-make-text']
+        .forEach((name) => makeVisible(name, false));
 
       makeVisible('svg-to-edit', false);
       scene.getObjectByName(currentPage.uuid).visible = true;
@@ -294,6 +297,49 @@ saveBtn.onclick = () => {
     // Load the current structure
     .then(() => loadStructure())
     .then(() => lookAtPage(networkStructure, currentPage.uuid));
+};
+
+const newPageBtn = document.getElementById('btn-new');
+newPageBtn.onclick = () => {
+  const normalVector3 = camera.position.clone()
+    .sub(cameraControls.target)
+    .normalize();
+
+  const positionVector3 = normalVector3.clone()
+    .multiplyScalar(-EDIT_DISTANCE)
+    .add(camera.position);
+
+  const normal = {
+    x: normalVector3.x,
+    y: normalVector3.y,
+    z: normalVector3.z,
+  };
+
+  const position = {
+    x: positionVector3.x,
+    y: positionVector3.y,
+    z: positionVector3.z,
+  };
+
+  fetch('/page', {
+    method: 'POST',
+    headers: {
+      'Content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      position,
+      normal,
+      svg: '',
+    }),
+  })
+    .then((res) => res.json())
+    .then(async ({ uuid }) => {
+      await loadStructure();
+      console.log('New page created', uuid, position, normal);
+      console.log(networkStructure.pages[uuid]);
+      currentPage = pageInfo(networkStructure, uuid);
+      changeMode('edit');
+    });
 };
 
 // Entrypoint

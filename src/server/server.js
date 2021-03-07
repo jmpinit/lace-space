@@ -13,8 +13,10 @@ app.use(express.json());
 app.use(express.static('public'));
 
 function createPage(author, svg, position, normal) {
+  const pageUUID = uuid.v4();
+
   const createPageQuery = db.prepare('INSERT INTO pages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  createPageQuery.run(uuid.v4(), Date.now(), author, svg,
+  createPageQuery.run(pageUUID, Date.now(), author, svg,
     position.x,
     position.y,
     position.z,
@@ -25,6 +27,8 @@ function createPage(author, svg, position, normal) {
   );
 
   createPageQuery.finalize();
+
+  return pageUUID;
 }
 
 function updatePage(pageUUID, svg) {
@@ -57,6 +61,20 @@ app.get('/structure', async (req, res) => {
 app.get('/page/:uuid', (req, res) =>{
   console.log('req.params', req.params);
   res.send();
+});
+
+app.post('/page', (req, res) => {
+  // TODO: fully validate
+
+  const { position, normal, svg } = req.body;
+
+  // TODO: Normalize normal
+  // TODO: Enforce position distance constraint
+  // TODO: Clean/validate SVG contents
+
+  const pageUUID = createPage('god', svg, position, normal);
+
+  res.json({ uuid: pageUUID });
 });
 
 app.put('/page', (req, res) => {

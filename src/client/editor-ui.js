@@ -1,3 +1,9 @@
+// TODO: pass this in
+const SVG_STYLE = {
+  stroke: 'white',
+  'stroke-width': '10',
+};
+
 function descendantOfElementType(el, tagName) {
   if (el.parentElement === null) {
     return false;
@@ -91,15 +97,16 @@ function selectSVGElement(el) {
 }
 
 function init() {
-  const lineBtnEl = document.getElementById('make-line');
-  const circleBtnEl = document.getElementById('make-circle');
-  const rectBtnEl = document.getElementById('make-rect');
-  const textBtnEl = document.getElementById('make-text');
+  const lineBtnEl = document.getElementById('btn-make-line');
+  const circleBtnEl = document.getElementById('btn-make-circle');
+  const rectBtnEl = document.getElementById('btn-make-rect');
+  const textBtnEl = document.getElementById('btn-make-text');
 
   const svgToEdit = document.getElementById('svg-to-edit');
 
   function createSVGElToEdit(tagName) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+    Object.entries(SVG_STYLE).forEach(([attrName, value]) => el.setAttribute(attrName, value));
     el.onclick = () => selectSVGElement(el);
     svgToEdit.appendChild(el);
     return el;
