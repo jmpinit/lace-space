@@ -157,6 +157,7 @@ async function loadPage(structure, uuid) {
   const normal = vector3FromXYZ(info.normal).normalize();
   svgObj.lookAt(new THREE.Vector3().addVectors(svgObj.position, normal));
 
+  console.log('Loaded SVG', uuid);
   return info;
 }
 
@@ -195,6 +196,7 @@ function loadStructure() {
   return fetch('/structure')
     .then((res) => res.json())
     .then((structure) => {
+      // Remove any objects from the scene that have been removed from the structure
       Object.keys(networkStructure.pages).concat(Object.keys(networkStructure.edges))
         .filter((uuid) => !(uuid in structure.pages) && !(uuid in structure.edges))
         .map((uuid) => scene.getObjectByName(uuid))
@@ -203,10 +205,12 @@ function loadStructure() {
       const objPromises = [];
 
       for (const uuid of Object.keys(structure.pages)) {
+        scene.remove(scene.getObjectByName(uuid));
         objPromises.push(loadPage(structure, uuid));
       }
 
       for (const uuid of Object.keys(structure.edges)) {
+        scene.remove(scene.getObjectByName(uuid));
         objPromises.push(loadEdge(structure, uuid));
       }
 
@@ -281,6 +285,7 @@ async function init() {
         cameraControls.minZoom = 0.5;
         cameraControls.maxZoom = 2;
         cameraControls.enabled = false;
+        window.history.pushState({ mode: 'edit' }, 'Edit Page');
         editPage(networkStructure, window.lacespace.currentPage);
       }
     });
@@ -323,12 +328,14 @@ function changeMode(modeName) {
 
       makeVisible('svg-to-edit', true);
       editPage(networkStructure, currentPage.uuid);
-      cameraControls.enabled = false;
 
+      makeVisible('svg-ui', true);
+
+      cameraControls.enabled = false;
       cursorObj.visible = false;
 
       break;
-    case 'move':
+    case 'move': {
       makeVisible('btn-move', false);
       makeVisible('btn-back', true);
       makeVisible('btn-new', true);
@@ -341,9 +348,17 @@ function changeMode(modeName) {
       scene.getObjectByName(currentPage.uuid).visible = true;
       cameraControls.enabled = true;
 
+      // FIXME: encapsulate SVG editor better so this is tweaked there instead of here
+      makeVisible('svg-ui', false);
+      const propertyPane = document.getElementById('svg-properties');
+      const propertyTable = propertyPane.getElementsByTagName('table')[0];
+
+      propertyTable.innerHTML = '';
+
       cursorObj.visible = true;
 
       break;
+    }
     case 'view':
       cameraControls.autoRotate = true;
       cameraControls.target.x = 0;
@@ -377,6 +392,7 @@ const backBtn = document.getElementById('btn-back');
 backBtn.onclick = () => window.history.back();
 
 window.onpopstate = (event) => {
+  console.log(event);
   changeMode(event.state.mode);
 };
 
