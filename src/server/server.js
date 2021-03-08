@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const http = require('http');
+const https = require('https');
 const uuid = require('uuid');
 const express = require('express');
 const sqlite3 = require('sqlite3');
@@ -175,7 +175,12 @@ app.put('/page', (req, res) => {
   res.send('ok');
 });
 
-const server = http.createServer(app);
+const options = {
+  key: fs.readFileSync('server.key'),
+  cert: fs.readFileSync('server.crt'),
+};
+
+const server = https.createServer(options, app);
 server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 
 // FIXME: remove
@@ -211,8 +216,9 @@ db.serialize(() => {
       y: -0.125743,
       z: 0.542507,
     },
-    svg: '<rect x="-500" y="-500" width="1000" height="1000" fill="none" stroke="green" stroke-width="10"/>'
-      + '<circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>',
+    svg: '',
+    //svg: '<rect x="-500" y="-500" width="1000" height="1000" fill="none" stroke="green" stroke-width="10"/>'
+    //   + '<circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>',
   };
 
   const pageEraser = {
@@ -230,7 +236,7 @@ db.serialize(() => {
       + '<circle cx="0" cy="0" r="500" fill="none" stroke="green" stroke-width="10"/>',
   };
 
-  createPage('god', pageTopLeaf.svg, pageTopLeaf.position, pageTopLeaf.normal);
+  //createPage('god', pageTopLeaf.svg, pageTopLeaf.position, pageTopLeaf.normal);
   createPage('god', pagePCB.svg, pagePCB.position, pagePCB.normal);
-  createPage('god', pageEraser.svg, pageEraser.position, pageEraser.normal);
+  //createPage('god', pageEraser.svg, pageEraser.position, pageEraser.normal);
 });
