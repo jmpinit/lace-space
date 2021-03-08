@@ -118,7 +118,7 @@ app.get('/structure', async (req, res) => {
   res.json(structure);
 });
 
-app.get('/page/:uuid', async (req, res) =>{
+app.get('/page/:uuid', async (req, res) => {
   const appTemplate = await new Promise((fulfill, reject) => {
     fs.readFile(path.join(__dirname, '../../templates/app.stache'), 'utf-8', (err, data) => {
       if (err) {

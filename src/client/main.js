@@ -15,6 +15,7 @@ let cameraControls;
 let cursorObj;
 let renderer;
 let currentPage;
+const edges = {};
 
 let networkStructure;
 
@@ -186,6 +187,7 @@ async function loadEdge(structure, uuid) {
   edgeObj.lookAt(endPos);
 
   edgeObj.name = uuid;
+  edges[uuid] = edgeObj;
   scene.add(edgeObj);
 }
 
@@ -413,6 +415,31 @@ newPageBtn.onclick = () => {
       window.location.href = `/page/${uuid}`;
     });
 };
+
+window.addEventListener('click', (event) => {
+  const mouse = new THREE.Vector2();
+
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  const raycaster = new THREE.Raycaster();
+
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObjects(Object.values(edges), true);
+
+  intersects.forEach(({ object }) => {
+    const uuid = object.parent.name;
+
+    const info = edgeInfo(networkStructure, uuid);
+
+    if (info.start === currentPage.uuid) {
+      window.location.href = `/page/${info.end}`;
+    } else if (info.end == currentPage.uuid) {
+      window.location.href = `/page/${info.start}`;
+    }
+  })
+});
 
 // Entrypoint
 ui.init();
