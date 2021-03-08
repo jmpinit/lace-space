@@ -118,9 +118,9 @@ app.get('/structure', async (req, res) => {
   res.json(structure);
 });
 
-app.get('/page/:uuid', async (req, res) => {
-  const appTemplate = await new Promise((fulfill, reject) => {
-    fs.readFile(path.join(__dirname, '../../templates/app.stache'), 'utf-8', (err, data) => {
+function readFile(filename) {
+  return new Promise((fulfill, reject) => {
+    fs.readFile(filename, 'utf-8', (err, data) => {
       if (err) {
         reject(err);
       }
@@ -128,6 +128,10 @@ app.get('/page/:uuid', async (req, res) => {
       fulfill(data);
     });
   });
+}
+
+app.get('/page/:uuid', async (req, res) => {
+  const appTemplate = await readFile(path.join(__dirname, '../../templates/app.stache'));
 
   if (!await pageExists(req.params.uuid)) {
     res.redirect('/');
@@ -135,6 +139,11 @@ app.get('/page/:uuid', async (req, res) => {
   }
 
   res.send(Mustache.render(appTemplate, { pageUUID: req.params.uuid }));
+});
+
+app.get('/viewer', async (req, res) => {
+  const appTemplate = await readFile(path.join(__dirname, '../../templates/app.stache'));
+  res.send(Mustache.render(appTemplate, { pageUUID: undefined }));
 });
 
 app.post('/page', (req, res) => {

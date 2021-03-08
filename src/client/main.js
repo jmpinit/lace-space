@@ -17,7 +17,7 @@ let renderer;
 let currentPage;
 const edges = {};
 
-let networkStructure;
+let networkStructure = { pages: {}, edges: {} };
 
 function vector3FromXYZ(pos) {
   return new THREE.Vector3(pos.x, pos.y, pos.z);
@@ -195,9 +195,10 @@ function loadStructure() {
   return fetch('/structure')
     .then((res) => res.json())
     .then((structure) => {
-      console.log(structure);
-      // FIXME: remove global
-      networkStructure = structure;
+      Object.keys(networkStructure.pages).concat(Object.keys(networkStructure.edges))
+        .filter((uuid) => !(uuid in structure.pages) && !(uuid in structure.edges))
+        .map((uuid) => scene.getObjectByName(uuid))
+        .forEach((obj) => scene.remove(obj));
 
       const objPromises = [];
 
@@ -208,6 +209,8 @@ function loadStructure() {
       for (const uuid of Object.keys(structure.edges)) {
         objPromises.push(loadEdge(structure, uuid));
       }
+
+      networkStructure = structure;
 
       return Promise.all(objPromises);
     });
@@ -265,14 +268,22 @@ async function init() {
 
   cameraControls = new OrbitControls(camera, renderer.domElement);
   cameraControls.screenSpacePanning = true;
-  cameraControls.minZoom = 0.5;
-  cameraControls.maxZoom = 2;
-  cameraControls.enabled = false;
 
   // Content
   scene.add(await loadGLTF('/models/out_main.gltf'));
   loadStructure()
-    .then((pages) => editPage(networkStructure, window.lacespace.currentPage));
+    .then((pages) => {
+      if (window.lacespace === undefined) {
+        // Setup for viewing overall model
+        setInterval(() => loadStructure(), 1000);
+        changeMode('view');
+      } else {
+        cameraControls.minZoom = 0.5;
+        cameraControls.maxZoom = 2;
+        cameraControls.enabled = false;
+        editPage(networkStructure, window.lacespace.currentPage);
+      }
+    });
 }
 
 function render() {
@@ -288,6 +299,7 @@ function render() {
 }
 
 function animate() {
+  cameraControls.update();
   requestAnimationFrame(animate);
   render();
 }
@@ -332,6 +344,26 @@ function changeMode(modeName) {
       cursorObj.visible = true;
 
       break;
+    case 'view':
+      cameraControls.autoRotate = true;
+      cameraControls.target.x = 0;
+      cameraControls.target.y = 0;
+      cameraControls.target.z = 0;
+
+      camera.position.set(0, 20, 130);
+      cameraControls.update();
+
+      makeVisible('btn-move', false);
+      makeVisible('btn-back', false);
+      makeVisible('btn-new', false);
+      makeVisible('btn-save', false);
+
+      ['btn-make-line', 'btn-make-circle', 'btn-make-rect']
+        .forEach((name) => makeVisible(name, false));
+
+      makeVisible('svg-to-edit', false);
+
+      break;
   }
 }
 
@@ -365,13 +397,6 @@ saveBtn.onclick = () => {
     },
     body: JSON.stringify(newPage),
   })
-    // Remove the existing structure
-    .then(() => {
-      Object.keys(networkStructure.pages).concat(Object.keys(networkStructure.edges))
-        .map((uuid) => scene.getObjectByName(uuid))
-        .forEach((obj) => scene.remove(obj));
-    })
-    // Load the current structure
     .then(() => loadStructure())
     .then(() => lookAtPage(networkStructure, currentPage.uuid));
 };
@@ -435,7 +460,7 @@ window.addEventListener('click', (event) => {
 
     if (info.start === currentPage.uuid) {
       window.location.href = `/page/${info.end}`;
-    } else if (info.end == currentPage.uuid) {
+    } else if (info.end === currentPage.uuid) {
       window.location.href = `/page/${info.start}`;
     }
   })
