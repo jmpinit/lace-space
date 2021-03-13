@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const https = require('https');
+const http = require('http');
 const uuid = require('uuid');
 const express = require('express');
 const sqlite3 = require('sqlite3');
@@ -175,12 +175,7 @@ app.put('/page', (req, res) => {
   res.send('ok');
 });
 
-const options = {
-  key: fs.readFileSync('server.key'),
-  cert: fs.readFileSync('server.crt'),
-};
-
-const server = https.createServer(options, app);
+const server = http.createServer(app);
 server.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 
 // FIXME: remove
